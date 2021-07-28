@@ -1,6 +1,5 @@
 package org.chef.mockdriver;
 
-import io.appium.java_client.AppiumDriver
 import io.appium.java_client.android.AndroidDriver
 import io.appium.java_client.android.AndroidElement
 import io.appium.java_client.ios.IOSDriver
@@ -10,14 +9,19 @@ import org.chef.mockdriver.util.ImageUtil
 import org.openqa.selenium.*
 import org.openqa.selenium.remote.DesiredCapabilities
 import org.openqa.selenium.remote.SessionId
+import java.net.URL
 import java.util.UUID
 
-class MockAndroidDriver : AndroidDriver<AndroidElement>(DesiredCapabilities()) {
+val FAKE_ADDRESS = URL("http://127.0.0.1:4732")
+
+val EMPTY_CAPS = DesiredCapabilities()
+
+class MockAndroidDriver : AndroidDriver<AndroidElement>(FAKE_ADDRESS, EMPTY_CAPS) {
     private val sessionId = SessionId("mock-sessionId-${UUID.randomUUID()}")
 
     override fun startSession(capabilities: Capabilities?) {
         val driverCapabilities = MutableCapabilities()
-        driverCapabilities.setCapability("automationName","uiautomator2")
+        driverCapabilities.setCapability("automationName", "uiautomator2")
         setValue(this, "capabilities", driverCapabilities)
     }
 
@@ -25,7 +29,8 @@ class MockAndroidDriver : AndroidDriver<AndroidElement>(DesiredCapabilities()) {
 
     override fun <X> getScreenshotAs(outputType: OutputType<X>) = mockScreenshot(outputType)
 
-    override fun findElements(by: String, using: String): MutableList<AndroidElement> = MockAndroidElement.mockElements()
+    override fun findElements(by: String, using: String): MutableList<AndroidElement> =
+        MockAndroidElement.mockElements()
 
     override fun findElements(by: By): MutableList<AndroidElement> = MockAndroidElement.mockElements()
 
@@ -63,12 +68,12 @@ class MockAndroidDriver : AndroidDriver<AndroidElement>(DesiredCapabilities()) {
     }
 }
 
-class MockIOSDriver : IOSDriver<IOSElement>(DesiredCapabilities()) {
+class MockIOSDriver : IOSDriver<IOSElement>(FAKE_ADDRESS, EMPTY_CAPS) {
     private val sessionId = SessionId("mock-sessionId-${UUID.randomUUID()}")
 
     override fun startSession(capabilities: Capabilities?) {
         val driverCapabilities = MutableCapabilities()
-        driverCapabilities.setCapability("automationName","xcuitest")
+        driverCapabilities.setCapability("automationName", "xcuitest")
         setValue(this, "capabilities", driverCapabilities)
     }
 
