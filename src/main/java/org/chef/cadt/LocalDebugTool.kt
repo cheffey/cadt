@@ -140,7 +140,8 @@ class LocalDebugTool {
     private fun screenshot(target: TakesScreenshot) {
         val screenshot = target.getScreenshotAs(OutputType.FILE)
         println("screenshot path: ${color(screenshot.absolutePath, ConsoleColor.BLUE)}")
-        ShellUtil.runCommands("open ${screenshot.absoluteFile}")
+        sleep(500)
+        ShellUtil.open(screenshot.absoluteFile.toString())
     }
 
     private fun listDevice() {
