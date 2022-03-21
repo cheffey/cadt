@@ -1,9 +1,6 @@
 package org.chef.example;
 
-import org.openqa.selenium.Capabilities;
-import org.openqa.selenium.WebElement;
 
-import io.appium.java_client.android.AndroidDriver;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.When;
 

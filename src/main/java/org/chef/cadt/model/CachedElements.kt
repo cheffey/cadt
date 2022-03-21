@@ -1,7 +1,5 @@
 package org.chef.cadt.model
 
-import io.appium.java_client.android.AndroidElement
-import io.appium.java_client.ios.IOSElement
 import org.chef.cadt.exception.WithUselessTraceException
 import org.chef.cadt.util.ConsoleColor
 import org.chef.cadt.util.ExceptionUtil
@@ -42,14 +40,11 @@ class CachedElements private constructor(private val targetList: MutableList<Cac
 
 class CachedElement(private val container: CachedElements, private val element: WebElement) : WebElement by element {
     val cacheText: String? by lazy { ExceptionUtil.tryOrNull { (element.text) } }
+    val cacheClass: String? by lazy { ExceptionUtil.tryOrNull { getAttribute("class") } }
     val cacheTestID: String? by lazy { ExceptionUtil.tryOrNull { getAttribute(testIDProperty) } }
-    private val testIDProperty = when (element) {
-        is AndroidElement -> "resource-id"
-        is IOSElement -> "name"
-        else -> throw WithUselessTraceException("Unsupported element type: ${element.javaClass}")
-    }
+    private val testIDProperty = "id"
 
-    fun print() = println("idx: ${container.indexOf(this)} ${colorID()}\t\t${colorText()}")
+    fun print() = println("idx: ${container.indexOf(this)} ${colorClass()}\t\t${colorID()}\t\t${colorText()}")
 
     private fun colorID(): String {
         val idStart = GeneralUtil.color("{id: ", ConsoleColor.YELLOW)
@@ -62,6 +57,13 @@ class CachedElement(private val container: CachedElements, private val element: 
         val textStart = GeneralUtil.color("[text: ", ConsoleColor.GREEN)
         val textEnd = GeneralUtil.color("]", ConsoleColor.GREEN)
         val text = cacheText?.replace("\n", "\\n")
+        return "$textStart$text$textEnd"
+    }
+
+    private fun colorClass(): String {
+        val textStart = GeneralUtil.color("[class: ", ConsoleColor.PURPLE)
+        val textEnd = GeneralUtil.color("]", ConsoleColor.PURPLE)
+        val text = cacheClass?.replace("\n", "\\n")
         return "$textStart$text$textEnd"
     }
 }

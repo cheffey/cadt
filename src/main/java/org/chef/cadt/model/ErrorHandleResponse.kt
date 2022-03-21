@@ -1,16 +1,5 @@
 package org.chef.cadt.model
 
-import io.appium.java_client.AppiumDriver
-import io.appium.java_client.android.AndroidDriver
-import io.appium.java_client.ios.IOSDriver
-import io.cucumber.plugin.event.Status
-import org.chef.cadt.util.ExceptionUtil.tryOrNull
-import org.chef.cadt.util.ExceptionUtil.tryRunIgnoredException
-import org.chef.cadt.util.GeneralUtil.color
-import org.chef.cadt.util.ReflectUtil.setValue
-import org.chef.cadt.util.StringUtil
-import org.chef.cadt.util.ThrowableRunnable
-import org.openqa.selenium.WebElement
 
 /**
  * Created by Chef.Xie

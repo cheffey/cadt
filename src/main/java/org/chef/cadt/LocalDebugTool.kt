@@ -1,11 +1,7 @@
 package org.chef.cadt
 
-import io.appium.java_client.AppiumDriver
-import io.appium.java_client.MobileBy
-import io.appium.java_client.android.AndroidDriver
 import io.cucumber.core.runner.CaseFlow
 import org.chef.cadt.exception.WithUselessTraceException
-import org.chef.cadt.model.AutomationType
 import org.chef.cadt.model.CachedElement
 import org.chef.cadt.model.CachedElements
 import org.chef.cadt.model.CommandMapper
@@ -15,6 +11,7 @@ import org.chef.cadt.model.ErrorHandleResponse
 import org.chef.cadt.util.ConsoleColor
 import org.chef.cadt.util.ExceptionUtil.tryOrNull
 import org.chef.cadt.util.ExceptionUtil.tryRunHandleException
+import org.chef.cadt.util.ExceptionUtil.tryRunIgnoredException
 import org.chef.cadt.util.GeneralUtil.color
 import org.chef.cadt.util.GeneralUtil.merge
 import org.chef.cadt.util.GeneralUtil.sleep
@@ -23,6 +20,7 @@ import org.chef.cadt.util.StringUtil.cutArgs
 import org.openqa.selenium.By
 import org.openqa.selenium.OutputType
 import org.openqa.selenium.TakesScreenshot
+import org.openqa.selenium.WebDriver
 import org.openqa.selenium.WebElement
 import java.util.*
 import java.util.function.Supplier
@@ -35,7 +33,7 @@ import java.util.regex.Pattern
 class LocalDebugTool {
     companion object {
         @JvmField
-        var driverLoader: Supplier<List<AppiumDriver<out WebElement>>>? = null
+        var driverLoader: Supplier<List<WebDriver>>? = null
 
         @JvmField
         var debugMode = false
@@ -93,7 +91,7 @@ class LocalDebugTool {
             .nonArgMap { info("0") }
             .oneArgMap { info(it) },
         CommandMapper("ss", "screenshot").desc(CommandDescriptions.SCREENSHOT_HELP)
-            .nonArgMap { screenshot(requiredCurrentDriver()) }
+            .nonArgMap { screenshot(requiredCurrentDriver() as TakesScreenshot) }
             .oneArgMap { screenshot(matchElement(it)) }
     )
 
@@ -147,9 +145,8 @@ class LocalDebugTool {
     private fun listDevice() {
         println("connection device count: ${loadedDevices.size}")
         for ((idx, device) in loadedDevices.withIndex()) {
-            val appiumUrl = device.appiumUrl
-            val sessionId = color(device.sessionId(), ConsoleColor.CYAN)
-            val message = "idx: $idx, appiumUrl: $appiumUrl, sessionID: $sessionId"
+            val url = device.url
+            val message = "idx: $idx, url: $url"
             if (device == currentDevice)
                 println(color(message, ConsoleColor.PURPLE))
             else
@@ -205,11 +202,7 @@ class LocalDebugTool {
     }
 
     private fun list() {
-        val by = when (requiredCurrentDevice().automationType()) {
-            AutomationType.UIAUTOMATOR2, AutomationType.ESPRESSO ->
-                MobileBy.xpath("//*[@content-desc or @resource-id or @text]")
-            AutomationType.XCUITEST -> MobileBy.iOSNsPredicateString("value LIKE '*' OR name LIKE '*'")
-        }
+        val by = By.xpath("//*[text() or @id]")
         val elements = findElements(by)
         cachedElements.clear()
         elements.forEach { collectThenPrint(it) }
@@ -245,28 +238,17 @@ class LocalDebugTool {
     }
 
     private fun findContains(keyword: String) {
-        val by = when (requiredCurrentDevice().automationType()) {
-            AutomationType.XCUITEST ->
-                MobileBy.iOSNsPredicateString("name CONTAINS '$keyword' OR value CONTAINS '$keyword'")
-            AutomationType.ESPRESSO,
-            AutomationType.UIAUTOMATOR2 ->
-                MobileBy.xpath(
-                    "//*[contains(@content-desc,'$keyword')" +
-                        " or contains(@resource-id,'$keyword')" +
-                        " or contains(@text,'$keyword')]"
-                )
-        }
+        val by = By.xpath(
+            "//*[contains(@content-desc,'$keyword')" +
+                " or contains(@resource-id,'$keyword')" +
+                " or contains(@text,'$keyword')]"
+        )
         findAndCollect(by)
     }
 
     private fun find(byType: String, using: String) {
         val by = when (byType) {
-            "i", "I" -> MobileBy.AccessibilityId(using)
-            "u", "U" -> MobileBy.AndroidUIAutomator(using)
-            "x", "X" -> MobileBy.xpath(using)
-            "p", "P" -> MobileBy.iOSNsPredicateString(using)
-            "c", "C" -> MobileBy.iOSClassChain(using)
-            "t", "T" -> MobileBy.tagName(using)
+            "x", "X" -> By.xpath(using)
             else -> throw WithUselessTraceException("Unsupported byType: $byType")
         }
         findAndCollect(by)
@@ -285,23 +267,8 @@ class LocalDebugTool {
 
     private fun info(indexOrID: String) {
         val element = matchElement(indexOrID)
-        val byMethod = if (isAndroid()) "UiSelector" else "NsPredicate"
 
-        element.cacheTestID?.let {
-            val findByIDSuggestion =
-                if (isAndroid()) "new UiSelector().resourceId(\"$it\")"
-                else "name == '$it'"
-            println("id: $it")
-            println("findByID $byMethod suggestion: $findByIDSuggestion")
-        }
-
-        element.cacheText?.let {
-            val findByTextSuggestion =
-                if (isAndroid()) "new UiSelector().text(\"$it\")"
-                else "value == '$it'"
-            println("text: $it")
-            println("findByText $byMethod suggestion: $findByTextSuggestion")
-        }
+        //todo suggestion
 
         val location = tryOrNull { element.location }
         println("location: [${location?.x},${location?.y}]")
@@ -311,6 +278,12 @@ class LocalDebugTool {
 
         println("displayed: " + element.isDisplayed)
         println("tagName: " + element.tagName)
+        tryRunIgnoredException {
+            val screenshot = element.getScreenshotAs(OutputType.FILE)
+            println("screenshot path: ${color(screenshot.absolutePath, ConsoleColor.BLUE)}")
+            sleep(500)
+            ShellUtil.open(screenshot.absoluteFile.toString())
+        }
     }
 
     private fun click(index: String) {
@@ -369,8 +342,6 @@ class LocalDebugTool {
         }
         return false
     }
-
-    private fun isAndroid() = currentDevice?.driver is AndroidDriver
 
     private fun requiredCurrentDevice() =
         currentDevice ?: (throw WithUselessTraceException("Invalid current device: null"))
